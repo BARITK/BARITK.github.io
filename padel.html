@@ -21,6 +21,8 @@ button{border:0;background:none;cursor:pointer}
 #hud{position:fixed;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 16px 0;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none}
 #scoreBox{position:absolute;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center}
 #score{font-size:56px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 4px 18px rgba(0,0,0,.45)}
+#aiTag{display:none;margin:4px auto 0;width:max-content;font-size:11px;font-weight:900;letter-spacing:2px;color:#0b1a36;background:#bfe3ff;border-radius:999px;padding:3px 10px}
+body.ai #aiTag{display:block}
 #bestLine{font-size:12px;font-weight:800;letter-spacing:2px;color:var(--muted);margin-top:2px}
 .icon{pointer-events:auto;width:40px;height:40px;border-radius:12px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;position:relative;z-index:2}
 .icon svg{width:19px;height:19px;fill:none;stroke:var(--text);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -82,7 +84,7 @@ h2{font-size:24px;font-weight:900;font-style:italic}
 
 <div id="hud" hidden>
   <button class="icon" id="muteBtn" aria-label="Toggle sound"></button>
-  <div id="scoreBox"><div id="score">0</div><div id="bestLine">BEST <span id="best">0</span></div></div>
+  <div id="scoreBox"><div id="score">0</div><div id="bestLine">BEST <span id="best">0</span></div><div id="aiTag">AI PLAYING</div></div>
   <div style="display:flex;flex-direction:column;align-items:flex-end">
     <button class="icon" id="quitBtn" aria-label="End game"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div id="lvl">LEVEL 1</div>
@@ -104,6 +106,7 @@ h2{font-size:24px;font-weight:900;font-style:italic}
     </ul>
     <button class="cta" id="playBtn">PLAY</button>
     <button class="ghost" id="boardBtn">Leaderboard</button>
+    <button class="ghost" id="aiBtn" hidden>Watch AI play</button>
     <div class="small">Best on this device: <b id="bestStart">0</b></div>
   </div>
 </div>
@@ -450,7 +453,10 @@ $('muteBtn').onclick=()=>{ muted=!muted; store.set('padelBounce.muted',muted); r
   if(muted){ stopMusic(); stopWind(); } else if(S.running){ initAudio(); startMusic(); if(EV.type==='wind') startWind(); } };
 
 /* ---------- Screens ---------- */
-function begin(){
+function begin(ai){
+  if(typeof ai!=='boolean') ai=S.ai||false;
+  S.ai=ai; document.body.classList.toggle('ai',ai);
+  if(window.PadelBot) PadelBot.enabled=ai;
   initAudio(); reset();
   ['startOv','overOv','boardOv'].forEach(id=>$(id).hidden=true);
   $('hud').hidden=false; $('best').textContent=S.best;
@@ -458,18 +464,19 @@ function begin(){
 }
 function gameOver(){
   S.running=false; stopMusic(); stopWind(); endEvent(); gameOverSound();
-  const isBest=S.score>S.best;
+  const isBest=!S.ai && S.score>S.best;
   if(isBest){ S.best=S.score; store.set('padelBounce.best',S.best); }
   $('finalScore').textContent=S.score;
   const sub=$('finalSub');
-  if(isBest&&S.score>0){ sub.textContent='New personal best!'; sub.className='new'; }
+  if(S.ai){ sub.textContent='bounces by the AI bot'; sub.className=''; }
+  else if(isBest&&S.score>0){ sub.textContent='New personal best!'; sub.className='new'; }
   else { sub.textContent=`bounces · your best ${S.best}`; sub.className=''; }
-  $('saveForm').hidden=!(S.score>0);
+  $('saveForm').hidden=!(S.score>0) || S.ai;
   $('nameIn').value=store.get('padelBounce.name','');
   setTimeout(()=>{ $('overOv').hidden=false; },450);
 }
 function home(){
-  S.running=false; stopMusic(); stopWind(); endEvent();
+  S.running=false; S.ai=false; document.body.classList.remove('ai'); if(window.PadelBot) PadelBot.enabled=false; stopMusic(); stopWind(); endEvent();
   $('hud').hidden=true; $('overOv').hidden=true; $('boardOv').hidden=true; $('startOv').hidden=false;
   $('bestStart').textContent=S.best;
 }
@@ -496,7 +503,8 @@ $('saveForm').addEventListener('submit',e=>{
   }
   $('nameIn').blur(); showBoard('overOv');
 });
-$('playBtn').onclick=begin; $('againBtn').onclick=begin; $('homeBtn').onclick=home;
+$('playBtn').onclick=()=>begin(false);
+$('aiBtn').onclick=()=>begin(true); $('againBtn').onclick=begin; $('homeBtn').onclick=home;
 $('boardBtn').onclick=()=>showBoard('startOv');
 $('boardBack').onclick=()=>{ $('boardOv').hidden=true; $(boardReturn).hidden=false; };
 $('quitBtn').onclick=()=>{ if(S.running) gameOver(); };
@@ -506,5 +514,6 @@ resize(); renderMute(); $('bestStart').textContent=S.best;
 racket.x=W/2; racket.y=H*0.72;
 requestAnimationFrame(frame);
 </script>
+<script src="bot/padel-bot.js" onload="document.getElementById('aiBtn').hidden=false"></script>
 </body>
 </html>
