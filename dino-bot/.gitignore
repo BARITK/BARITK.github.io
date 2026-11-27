@@ -1,0 +1,3 @@
+__pycache__/
+brains/*
+!brains/pretrained.npz
