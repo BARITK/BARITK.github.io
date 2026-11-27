@@ -28,7 +28,7 @@ body.ai #aiTag{display:block}
 .icon svg{width:19px;height:19px;fill:none;stroke:var(--text);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #lvl{font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 10px;margin-top:6px}
 
-#event{position:fixed;left:50%;top:calc(96px + env(safe-area-inset-top));transform:translate(-50%,-10px);opacity:0;transition:.25s;pointer-events:none;
+#event{position:fixed;left:50%;top:calc(112px + env(safe-area-inset-top));transform:translate(-50%,-10px);opacity:0;transition:.25s;pointer-events:none;
   background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 16px 10px;text-align:center;min-width:150px}
 #event.show{opacity:1;transform:translate(-50%,0)}
 #evText{font-weight:900;font-size:16px;letter-spacing:1px}
@@ -211,13 +211,8 @@ function hit(){
   S.lastHitX=racket.x;
   ball.spin=ball.vx*0.02;
   ball.y=racket.y-ball.r-2;
-  const prevTier=tier(), gold=EV.type==='gold';
+  const gold=EV.type==='gold';
   addScore(gold?2:1);
-  if(tier()>prevTier){
-    $('lvl').textContent='LEVEL '+(tier()+1);
-    if(!EV.type){ showBanner('LEVEL '+(tier()+1),'level'); levelTimer=1.6; }
-    pop(680,.35); pop(860,.35,.08); pop(1050,.28,.16);
-  }
   const moving=Math.hypot(racket.vx,racket.vy)>H*0.004;
   const perfect=moving&&Math.abs(nx)<0.2&&Math.abs(ny)<0.35;
   burst(ball.x,ball.y,perfect||gold?22:9,perfect||gold);
@@ -226,7 +221,14 @@ function hit(){
   if(gold) pop(980,.25);
   if(perfect) toast('Perfect!',0.6);
 }
-function addScore(n){ S.score+=n; $('score').textContent=S.score; }
+function addScore(n){
+  const prev=tier(); S.score+=n; $('score').textContent=S.score;
+  if(tier()>prev){
+    $('lvl').textContent='LEVEL '+(tier()+1);
+    if(!EV.type){ showBanner('LEVEL '+(tier()+1),'level'); levelTimer=1.6; }
+    pop(680,.35); pop(860,.35,.08); pop(1050,.28,.16);
+  }
+}
 function toast(t,dur){ $('toast').textContent=t; $('toast').classList.add('show'); toastTimer=dur; }
 function burst(x,y,n,gold){
   for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=(Math.random()*0.6+0.4)*H*0.012;
