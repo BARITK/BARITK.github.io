@@ -9,7 +9,7 @@ import json, sys, time
 import numpy as np
 
 G0 = 0.0009
-N_IN, N_H, N_OUT = 14, 32, 2
+N_IN, N_H, N_OUT = 16, 32, 2
 PX = 1 / 844  # one pixel on a typical phone, used for the game's "2px" nudge
 
 
@@ -51,15 +51,19 @@ class Env:
             self.rx / W * 2 - 1, self.ry * 2 - 1, self.rvx * 40, self.rvy * 40,
             (self.bx - self.rx) / W * 2, (self.by - self.ry) * 2,
             self.wind / (W * 0.007), (self.ev == 2) * 1.0, tier * 0.55, W * 2 - 1,
+            np.where(np.isnan(self.lastHitX), 0.0, (self.rx - np.nan_to_num(self.lastHitX)) / W * 2),
+            self.armed * 1.0,
         ], 1)
 
     def step(self, ax, ay):
+        """Network actions in [-1, 1] -> pointer position."""
+        self.step_pointer(self.W * (0.5 + ax * 0.6), 0.5 + (ay + 1) * 0.25)
+
+    def step_pointer(self, px, py):
         r, W, R, br = self.rng, self.W, self.R, self.br
         alive = ~self.done
         self.t += 1
         # pointer -> racket (same easing and clamps as the game)
-        px = self.bx + ax * W * 0.5
-        py = 0.5 + (ay + 1) * 0.25
         tx = np.clip(px, R * 0.6, W - R * 0.6)
         ty = np.clip(py, 0.5 + R, 1 - R * 0.6)
         self.rx = self.rx + (tx - self.rx) * 0.75
